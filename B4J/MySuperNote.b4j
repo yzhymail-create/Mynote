@@ -1,0 +1,116 @@
+﻿AppType=JavaFX
+Build1=Default,NoteSqlitepc.example
+File1=Card.bjl
+File10=Page2Left.bjl
+File11=privacy policy.txt
+File12=psw.bjl
+File13=Regist_Page.bjl
+File14=searchview.bjl
+File15=sycview.bjl
+File16=template.json
+File17=ViewCard.bjl
+File2=DataCards.bjl
+File3=events.json
+File4=gpsw.bjl
+File5=hamburger.png
+File6=Login.bjl
+File7=login_view.bjl
+File8=mynote.ico
+File9=notesql.db
+FileGroup1=Default Group
+FileGroup10=Default Group
+FileGroup11=Default Group
+FileGroup12=Default Group
+FileGroup13=Default Group
+FileGroup14=Default Group
+FileGroup15=Default Group
+FileGroup16=Default Group
+FileGroup17=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+FileGroup7=Default Group
+FileGroup8=Default Group
+FileGroup9=Default Group
+Group=Default Group
+Library1=b4xdrawer
+Library10=jrandomaccessfile
+Library11=jxui
+Library12=keyvaluestore
+Library13=ss_aesencryption
+Library14=xui views
+Library15=dbutils
+Library2=b4xpages
+Library3=b4xpreferencesdialog
+Library4=b4xtable
+Library5=bctoast
+Library6=jcore
+Library7=jfx
+Library8=jnetwork
+Library9=jokhttputils2
+Module1=|relative|..\B4XMainPage
+Module10=|relative|..\Search
+Module11=|relative|..\Synchorize
+Module2=|relative|..\B4XPageData
+Module3=|relative|..\DBRequestManager
+Module4=|relative|..\Gpsw_page
+Module5=|relative|..\jRDC2
+Module6=|relative|..\Login_Page
+Module7=|relative|..\NoteView
+Module8=|relative|..\Psw_Page
+Module9=|relative|..\Regist_Page
+NumberOfFiles=17
+NumberOfLibraries=15
+NumberOfModules=11
+Version=10.5
+@EndOfDesignText@
+#Region Project Attributes 
+	#MainFormWidth: 600
+	#MainFormHeight: 600 
+	#AdditionalJar: sqlite-jdbc-3.7.2
+	#PackagerProperty: IconFile = ..\Files\mynote.ico
+     #PackagerProperty: ExeName = MyNote
+	 #CustomBuildAction: After Packager, C:\Program Files (x86)\Inno Setup 6\Compil32.exe, /cc ../InstallerScript.iss
+	 #PackagerProperty: IncludedModules = jdk.localedata
+#End Region
+
+Sub Process_Globals
+	Private fx As JFX
+	Private MainForm As Form
+	Type DBResult (Tag As Object, Columns As Map, Rows As List)
+	Type DBCommand (Name As String, Parameters() As Object)
+	Type MyMessage (id_user As String,TX_newlist As List, TX_changedlist As List, TX_dellist As List, PS_newlist As List, PS_changedlist As List, PS_dellist As List, _
+	State_Flag As Map,Finish_Flag  As Boolean,Process_Flag As Boolean)
+End Sub
+
+Sub AppStart (Form1 As Form, Args() As String)
+	MainForm = Form1
+	MainForm.Show
+	Dim PagesManager As B4XPagesManager
+	PagesManager.Initialize(MainForm)
+End Sub
+
+'Template version: B4J-1.0
+#Region Delegates
+Sub MainForm_FocusChanged (HasFocus As Boolean)
+	B4XPages.Delegate.MainForm_FocusChanged(HasFocus)
+End Sub
+
+Sub MainForm_Resize (Width As Double, Height As Double)
+	B4XPages.Delegate.MainForm_Resize(Width, Height)
+End Sub
+
+Sub MainForm_Closed
+	B4XPages.Delegate.MainForm_Closed
+End Sub
+
+Sub MainForm_CloseRequest (EventData As Event)
+	B4XPages.Delegate.MainForm_CloseRequest(EventData)
+End Sub
+
+Public Sub MainForm_IconifiedChanged (Iconified As Boolean)
+	B4XPages.Delegate.MainForm_IconifiedChanged(Iconified)
+End Sub
+#End Region

@@ -1,0 +1,144 @@
+﻿Build1=Default,MyNote.example
+Build2=New_1,com.mydemo.app
+Build3=New_2,com.user1.mysupernote
+File1=Card.bal
+File10=privacy policy.txt
+File11=psw.bal
+File12=regist_page.bal
+File13=SearchView.bal
+File14=sycview.bal
+File15=template.json
+File16=ViewCard.bal
+File2=DataCards.bal
+File3=default-orange.png
+File4=gpsw.bal
+File5=hamburger.png
+File6=Login.bal
+File7=login_view.bal
+File8=notesql.db
+File9=Page2Left.bal
+FileGroup1=B4XPageData
+FileGroup10=Default Group
+FileGroup11=Default Group
+FileGroup12=Default Group
+FileGroup13=Default Group
+FileGroup14=Default Group
+FileGroup15=Default Group
+FileGroup16=Default Group
+FileGroup2=B4XPageData
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+FileGroup7=Default Group
+FileGroup8=Default Group
+FileGroup9=B4XPageData
+Group=Default Group
+Library1=b4xdrawer
+Library10=okhttputils2
+Library11=randomaccessfile
+Library12=sql
+Library13=ss_aesencryption
+Library14=xui views
+Library15=toastmessageshow
+Library2=b4xpages
+Library3=b4xtable
+Library4=bctoast
+Library5=clipboard
+Library6=core
+Library7=javaobject
+Library8=keyvaluestore2
+Library9=network
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="5" android:targetSdkVersion="35"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~'CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~~\n~' 28 - Non-ssl (non-https) communication is not permitted by default.~\n~' It can be enabled in B4A v9+ by adding this line to the manifest editor:~\n~CreateResourceFromFile(Macro, Core.NetworkClearText)~\n~SetActivityAttribute(main, android:windowSoftInputMode, adjustPan|stateHidden)
+Module1=|relative|..\B4XMainPage
+Module10=|relative|..\Search
+Module11=|relative|..\Starter
+Module12=|relative|..\Synchorize
+Module2=|relative|..\B4XPageData
+Module3=|relative|..\DBRequestManager
+Module4=|relative|..\Gpsw_page
+Module5=|relative|..\jRDC2
+Module6=|relative|..\Login_Page
+Module7=|relative|..\NoteView
+Module8=|relative|..\Psw_Page
+Module9=|relative|..\Regist_Page
+NumberOfFiles=16
+NumberOfLibraries=15
+NumberOfModules=12
+Version=13.4
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: MyNote
+	#VersionCode: 1
+	#VersionName: 
+	#MultiDex: False
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: portrait
+	#CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: True
+#End Region
+#BridgeLogger: True 
+'**************************
+'Change the ip in the jRDC2 class
+
+Sub Process_Globals
+	Public ActionBarHomeClicked As Boolean
+	Type DBResult (Tag As Object, Columns As Map, Rows As List)
+	Type DBCommand (Name As String, Parameters() As Object)
+	Type MyMessage (id_user As String,TX_newlist As List, TX_changedlist As List, TX_dellist As List, PS_newlist As List, PS_changedlist As List, PS_dellist As List, _
+	State_Flag As Map,Finish_Flag  As Boolean,Process_Flag As Boolean)
+End Sub
+
+Sub Globals
+
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Dim pm As B4XPagesManager
+	pm.Initialize(Activity)
+End Sub
+
+'Template version: B4A-1.0
+
+#Region Delegates
+
+Sub Activity_ActionBarHomeClick
+	ActionBarHomeClicked = True
+	B4XPages.Delegate.Activity_ActionBarHomeClick
+	ActionBarHomeClicked = False
+End Sub
+
+Sub Activity_KeyPress (KeyCode As Int) As Boolean
+	Return B4XPages.Delegate.Activity_KeyPress(KeyCode)
+End Sub
+
+Sub Activity_Resume
+	B4XPages.Delegate.Activity_Resume
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+	B4XPages.Delegate.Activity_Pause
+End Sub
+
+Sub Activity_PermissionResult (Permission As String, Result As Boolean)
+	B4XPages.Delegate.Activity_PermissionResult(Permission, Result)
+End Sub
+
+Sub Create_Menu (Menu As Object)
+	B4XPages.Delegate.Create_Menu(Menu)
+End Sub
+
+#if Java
+public boolean _onCreateOptionsMenu(android.view.Menu menu) {
+	 processBA.raiseEvent(null, "create_menu", menu);
+	 return true;
+	
+}
+#End If
+#End Region
+
+'Program code should go into B4XMainPage and other pages.

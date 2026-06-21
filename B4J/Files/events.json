@@ -1,0 +1,29 @@
+{
+    "Version": 1.66,
+    "Theme": "Light Theme",
+    "Items": [
+        {
+            "options": [
+                "work",
+                "holiday",
+                "party"
+            ],
+            "title": "Event Type",
+            "type": "Short Options",
+            "key": "event_type",
+            "required": true
+        },
+        {
+            "title": "Value",
+            "type": "Number",
+            "key": "value",
+            "required": true
+        },
+        {
+            "title": "Description",
+            "type": "Multiline Text",
+            "key": "description",
+            "required": false
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+# JetBrains / workspace metadata
+.idea/
+*.iml
+
+# B4X generated artifacts
+B4A/Objects/
+B4J/Objects/
+B4J/Output/
+B4A/AutoBackups/
+B4J/AutoBackups/
+
+# Packaged build outputs
+B4A/*.apk
+B4J/*.exe
+

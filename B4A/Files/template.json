@@ -1,0 +1,37 @@
+{
+    "Version": 1.1,
+    "Theme": "Light Theme",
+    "Items": [
+
+        {
+            "title": "Description",
+            "type": "Text",
+            "key": "Description",
+            "required": true
+        },
+        {
+            "title": "Username",
+            "type": "Text",
+            "key": "Username",
+            "required": true
+        },
+        {
+            "title": "Password",
+            "type": "Text",
+            "key": "Password",
+            "required": true
+        },
+        {
+            "title": "Email",
+            "type": "Text",
+            "key": "Email",
+            "required": false
+        },
+        {
+            "title": "Remark",
+            "type": "Text",
+            "key": "Remark",
+            "required": false
+        }
+    ]
+}
