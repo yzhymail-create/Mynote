@@ -1,2 +1,0 @@
-Manifest-Version: 1.00
-Main-Class: b4j.example.main

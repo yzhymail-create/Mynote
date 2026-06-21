@@ -45,4 +45,8 @@
   - 处理结果：已将本次请求和上面的架构评估结论写入 `CHAT_HISTORY.md`，并准备基于当前工作区内容创建一次带日期的 Git 快照提交，用于后续按提交点回退。
   - 说明：项目内的对话追溯采用 `CHAT_HISTORY.md` 保存摘要与结论，代码级差异以 Git 提交历史为准，二者结合即可定位“聊了什么”与“改了什么”。
   - 涉及文件：`CHAT_HISTORY.md`
+- 用户：要求补一份更严格的 `.gitignore`，把 B4A/B4J 与内置 jRDC 的生成物从后续提交中排除掉。
+  - 处理结果：已更新 `.gitignore`，补充忽略根目录 `Output/`、`B4J/shell/`、`B4J/temp/` 以及 `mynote_jrdc2/jRDC/Objects/`、`mynote_jrdc2/jRDC/AutoBackups/`；同时执行 `git rm --cached` 将这些已被跟踪的生成物从 Git 索引中移除，但保留本地文件不删除。
+  - 说明：`.gitignore` 只影响后续跟踪；对已经提交过的生成物，必须同时做一次索引清理，后面的提交历史才会真正变干净。
+  - 涉及文件：`.gitignore`、`CHAT_HISTORY.md`
 

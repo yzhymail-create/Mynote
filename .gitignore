@@ -8,6 +8,15 @@ B4J/Objects/
 B4J/Output/
 B4A/AutoBackups/
 B4J/AutoBackups/
+Output/
+
+# B4J packager / shell outputs
+B4J/shell/
+B4J/temp/
+
+# Bundled jRDC generated artifacts
+mynote_jrdc2/jRDC/Objects/
+mynote_jrdc2/jRDC/AutoBackups/
 
 # Packaged build outputs
 B4A/*.apk

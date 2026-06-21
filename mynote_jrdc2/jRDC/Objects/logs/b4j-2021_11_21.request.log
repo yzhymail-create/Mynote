@@ -1,7 +1,0 @@
-127.0.0.1 - - [21/11月/2021:11:55:22 +0000] "GET /b4x HTTP/1.1" 500 682 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:11:55:42 +0000] "GET /favicon.ico HTTP/1.1" 404 326 "http://127.0.0.1:17178/b4x" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:11:56:41 +0000] "GET /b4x HTTP/1.1" 200 76 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:11:58:17 +0000] "GET /b4x HTTP/1.1" 200 76 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:12:01:44 +0000] "GET /b4x HTTP/1.1" 200 76 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:12:03:02 +0000] "GET /b4x HTTP/1.1" 500 682 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
-127.0.0.1 - - [21/11月/2021:12:04:02 +0000] "GET /b4x HTTP/1.1" 200 76 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.53"
