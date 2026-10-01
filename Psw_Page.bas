@@ -194,35 +194,69 @@ Private Sub ShowDialog(Item As Map, RowId As Long)
 End Sub
 
 Private Sub CollectDialogInput (Item As Map) As ResumableSub
-	Dim defaults As Map = Item
-	Wait For (PromptField("Description", defaults.GetDefault("Description", ""))) Complete (Desc As Object)
-	If Desc = Null Then Return False
-	Wait For (PromptField("Username", defaults.GetDefault("Username", ""))) Complete (UserName As Object)
-	If UserName = Null Then Return False
-	Wait For (PromptField("Password", defaults.GetDefault("Password", ""))) Complete (Password As Object)
-	If Password = Null Then Return False
-	Wait For (PromptField("Email", defaults.GetDefault("Email", ""))) Complete (Email As Object)
-	If Email = Null Then Return False
-	Wait For (PromptField("Remark", defaults.GetDefault("Remark", ""))) Complete (Remark As Object)
-	If Remark = Null Then Return False
+	Wait For (ShowPasswordEditor(Item)) Complete (Success As Boolean)
+	Return Success
+End Sub
 
-	Item.Put("Description", Desc)
-	Item.Put("Username", UserName)
-	Item.Put("Password", Password)
-	Item.Put("Email", Email)
-	Item.Put("Remark", Remark)
+Private Sub ShowPasswordEditor (Item As Map) As ResumableSub
+	Dim defaults As Map = Item
+	If defaults.IsInitialized = False Then
+		defaults.Initialize
+	End If
+
+	Dim dlgWidth As Int = Max(280dip, Min(Root.Width - 24dip, 520dip))
+	Dim dlgHeight As Int = Max(360dip, Min(Root.Height - 36dip, 560dip))
+	Dim pnl As B4XView = xui.CreatePanel("")
+	pnl.SetLayoutAnimated(0, 0, 0, dlgWidth, dlgHeight)
+	pnl.Color = xui.Color_White
+
+	Dim currentTop As Int = 10dip
+	Dim fieldH As Int = 40dip
+	Dim titleGap As Int = 22dip
+	Dim rowGap As Int = 10dip
+
+	Dim descInput As B4XView = CreateLabeledInput(pnl, currentTop, "Description", defaults.GetDefault("Description", ""), dlgWidth, fieldH)
+	currentTop = currentTop + titleGap + fieldH + rowGap
+	Dim userInput As B4XView = CreateLabeledInput(pnl, currentTop, "Username", defaults.GetDefault("Username", ""), dlgWidth, fieldH)
+	currentTop = currentTop + titleGap + fieldH + rowGap
+	Dim pwdInput As B4XView = CreateLabeledInput(pnl, currentTop, "Password", defaults.GetDefault("Password", ""), dlgWidth, fieldH)
+	currentTop = currentTop + titleGap + fieldH + rowGap
+	Dim emailInput As B4XView = CreateLabeledInput(pnl, currentTop, "Email", defaults.GetDefault("Email", ""), dlgWidth, fieldH)
+	currentTop = currentTop + titleGap + fieldH + rowGap
+	Dim remarkInput As B4XView = CreateLabeledInput(pnl, currentTop, "Remark", defaults.GetDefault("Remark", ""), dlgWidth, fieldH)
+
+	Dialog.Title = "Edit"
+	Wait For (Dialog.ShowCustom(pnl, "Save", "", "Cancel")) Complete (Result As Int)
+	If Result <> xui.DialogResponse_Positive Then Return False
+
+	Item.Put("Description", descInput.Text.Trim)
+	Item.Put("Username", userInput.Text.Trim)
+	Item.Put("Password", pwdInput.Text)
+	Item.Put("Email", emailInput.Text.Trim)
+	Item.Put("Remark", remarkInput.Text.Trim)
 	Return True
 End Sub
 
-Private Sub PromptField (Title As String, DefaultValue As String) As ResumableSub
-	InputTemplate.Initialize
-	InputTemplate.lblTitle.Text = Title
-	InputTemplate.Text = DefaultValue
-	Wait For (Dialog.ShowTemplate(InputTemplate, "OK", "", "CANCEL")) Complete (Result As Int)
-	If Result = xui.DialogResponse_Positive Then
-		Return InputTemplate.Text
-	End If
-	Return Null
+Private Sub CreateLabeledInput(Parent As B4XView, Top As Int, Title As String, DefaultValue As String, FormWidth As Int, FieldHeight As Int) As B4XView
+	Dim lbl As Label
+	lbl.Initialize("")
+	lbl.Text = Title
+	Parent.AddView(lbl, 10dip, Top, FormWidth - 20dip, 20dip)
+
+	Dim input As B4XView
+	#If B4A
+	Dim et As EditText
+	et.Initialize("")
+	et.Text = DefaultValue
+	input = et
+	#Else
+	Dim tf As TextField
+	tf.Initialize("")
+	tf.Text = DefaultValue
+	input = tf
+	#End If
+	Parent.AddView(input, 10dip, Top + 22dip, FormWidth - 20dip, FieldHeight)
+	Return input
 End Sub
 
 

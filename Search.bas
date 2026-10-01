@@ -20,8 +20,12 @@ Sub Class_Globals
 	Private IME As IME
 	#End If
 	Private clv2 As CustomListView
+	Private btnExportSearch As B4XView
+	Private Button2 As B4XView
+	Private output As B4XView
 	#if b4a
 	Private BtxInput As EditText
+	Private ion As Object
 	#end if
 	
 	Private InPut_Text As String
@@ -53,7 +57,24 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Drawer.CenterPanel.LoadLayout("searchview")
 	Root.LoadLayout("searchview")
 	MP = B4XPages.MainPage
+	BindExportButton
 	B4XLoadingIndicator1.Hide
+End Sub
+
+Private Sub BindExportButton
+	If output.IsInitialized Then
+		btnExportSearch = output
+	Else If Button2.IsInitialized Then
+		btnExportSearch = Button2
+	Else
+		btnExportSearch = Null
+	End If
+	If btnExportSearch.IsInitialized Then btnExportSearch.Text = "TO TXT"
+End Sub
+
+Private Sub UpdateExportButtonLayout
+	If btnExportSearch.IsInitialized = False Then Return
+	'Use layout-defined position/size so it adapts across phone/tablet.
 End Sub
 
 'You can see the list of page related events in the B4XPagesManager object. The event name is B4XPage.
@@ -77,6 +98,8 @@ Sub PopulateCards1 (Search_String As String)
 	Dim rs As ResultSet
 	B4XLoadingIndicator1.Show
 	Dim Paremeters()  As String = Array As String(B4XPages.MainPage.KVS.Get("id_user"))
+	Dim hasUuid As Boolean = MP.EventsUseUuid
+	Dim hasLunarText As Boolean = MP.EventsUseLunarText
 	rs = MP.SQL1.ExecQuery2(MP.searchEvents,Paremeters)
 	
 	Do While rs.NextRow
@@ -84,27 +107,23 @@ Sub PopulateCards1 (Search_String As String)
 		Dim eventType As String = rs.GetString("event_type")
 		Dim description As String = rs.GetString("description")
 		Dim v As String = rs.GetString("value")
-		Dim str As String = eventType & description & v
+		Dim tags As String = rs.GetString("tags")
+		Dim attachmentsJson As String = rs.GetString("attachments_json")
+		Dim str As String = eventType & description & v & tags & attachmentsJson
 		Dim search_result = False As Boolean
 		search_result = FindWordInText(Search_String,str)
 		
 		If search_result = True Then
 			Get_data_flag = True
-			Dim time As String = rs.GetString("time")
-			Dim  ResultSet1 As ResultSet
-			Dim Query As String = "SELECT RowId FROM events WHERE time = ?"
-			ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (time))
-			#if B4A
-			ResultSet1.Position=0
-			#END IF
-			Do While ResultSet1.NextRow
-				Dim id As Int = ResultSet1.Getint2(0)
-			Loop
-
-			ResultSet1.Close
+			Dim eventUuid As String = ""
+			If hasUuid Then eventUuid = rs.GetString("uuid")
+			Dim lunarText As String = ""
+			If hasLunarText Then lunarText = rs.GetString("lunar_text")
+			lunarText = MP.ResolveEventLunarText(rs.GetString("time"), lunarText)
+			Dim id As Long = MP.ResolveEventRowId(eventUuid, rs.GetString("time"))
 			
-			Dim hit As Map = ResolveFirstHit(eventType, description, v, Search_String)
-			Dim mapData As Map = CreateMap("id":id,"event_type":eventType,"description":description,"value":v,"time":rs.GetString("time"), _
+			Dim hit As Map = ResolveFirstHit(eventType, description, v, tags, Search_String)
+			Dim mapData As Map = CreateMap("id":id,"uuid":eventUuid,"event_type":eventType,"description":description,"value":v,"tags":tags,"time":rs.GetString("time"),"lunar_text":lunarText, _
 				"kw":Search_String,"hit_field":hit.Get("field"),"hit_start":hit.Get("start"),"hit_len":Search_String.Length)
 			Dim p As B4XView = CreateCard1(mapData)
 			clv2.Add(p, mapData)
@@ -162,37 +181,13 @@ End Sub
 
 Private Sub BuildHighlightedText (Source As String, Keyword As String) As Object
 	If Source = Null Then Source = ""
-	If Keyword = "" Then Return Source
-	Dim matches As List = FindMatches(Source, Keyword)
-	If matches.Size = 0 Then Return Source
-	Dim cs As CSBuilder
-	cs.Initialize
-	Dim cursor As Int = 0
-	For Each startIndex As Int In matches
-		If startIndex > cursor Then cs.Append(Source.SubString2(cursor, startIndex))
-		Dim endIndex As Int = Min(Source.Length, startIndex + Keyword.Length)
-		cs.BackgroundColor(xui.Color_Yellow).Color(xui.Color_Black).Append(Source.SubString2(startIndex, endIndex)).PopAll
-		cursor = endIndex
-	Next
-	If cursor < Source.Length Then cs.Append(Source.SubString(cursor))
-	Return cs
+	If Keyword <> "" Then
+		Return Source
+	End If
+	Return Source
 End Sub
 
-Private Sub FindMatches (Source As String, Keyword As String) As List
-	Dim res As List
-	res.Initialize
-	If Source = Null Or Keyword = "" Then Return res
-	Dim srcLower As String = Source.ToLowerCase
-	Dim keyLower As String = Keyword.ToLowerCase
-	Dim pos As Int = srcLower.IndexOf(keyLower)
-	Do While pos > -1
-		res.Add(pos)
-		pos = srcLower.IndexOf2(keyLower, pos + Max(1, keyLower.Length))
-	Loop
-	Return res
-End Sub
-
-Private Sub ResolveFirstHit (EventType As String, Description As String, ValueText As String, Keyword As String) As Map
+Private Sub ResolveFirstHit (EventType As String, Description As String, ValueText As String, TagsText As String, Keyword As String) As Map
 	Dim m As Map
 	m.Initialize
 	Dim p As Int = Description.ToLowerCase.IndexOf(Keyword.ToLowerCase)
@@ -208,6 +203,17 @@ Private Sub ResolveFirstHit (EventType As String, Description As String, ValueTe
 		Return m
 	End If
 	p = ValueText.ToLowerCase.IndexOf(Keyword.ToLowerCase)
+	If p > -1 Then
+		m.Put("field", "value")
+		m.Put("start", p)
+		Return m
+	End If
+	p = TagsText.ToLowerCase.IndexOf(Keyword.ToLowerCase)
+	If p > -1 Then
+		m.Put("field", "description")
+		m.Put("start", 0)
+		Return m
+	End If
 	m.Put("field", "value")
 	m.Put("start", p)
 	Return m
@@ -246,8 +252,11 @@ Private Sub lblDelete_Click
 	Dim sf As Object = xui.Msgbox2Async("Delete event?", "WARNING", "Yes", "Cancel", "No", Null)
 	Wait For (sf) Msgbox_Result (Result As Int)
 	If Result = xui.DialogResponse_Positive Then
-		Dim Paremeters As String = m.Get("id")
+		Dim Paremeters As Long = MP.ResolveEventRowIdFromMap(m)
+		If Paremeters <= 0 Then Return
 		B4XLoadingIndicator1.Show
+		Dim tem_time As String = MP.SQL1.ExecQuerySingleResult2("SELECT time from events WHERE rowid = ?",Array As String(Paremeters))
+		MP.InsertDeleteEventTombstone(MP.KVS.Get("id_user"), m.GetDefault("uuid", ""), tem_time)
 		
 		MP.SQL1.ExecNonQuery2(MP.deleteEvents ,array as string ( Paremeters))
 		clv2.RemoveAt(Index)
@@ -258,5 +267,100 @@ End Sub
 
 
 Sub B4XPage_Appear
+	BindExportButton
+	UpdateExportButtonLayout
+	B4XPages.SetTitle(Me, "Search (TXT导出)")
 
 End Sub
+
+Private Sub B4XPage_Resize (Width As Int, Height As Int)
+	UpdateExportButtonLayout
+
+End Sub
+
+Private Sub Button2_Click
+	ExportSearchResultsTxt
+End Sub
+
+Private Sub output_Click
+	ExportSearchResultsTxt
+End Sub
+
+Private Sub btnExportSearch_Click
+	ExportSearchResultsTxt
+End Sub
+
+Private Sub ExportSearchResultsTxt
+	If clv2.Size = 0 Then
+		xui.MsgboxAsync("当前没有搜索结果可导出。", "导出TXT")
+		Return
+	End If
+
+	Dim sb As StringBuilder
+	sb.Initialize
+	sb.Append("MySuperNote Search Export").Append(CRLF)
+	sb.Append("Keyword: ").Append(CurrentKeyword).Append(CRLF)
+	sb.Append("Count: ").Append(clv2.Size).Append(CRLF).Append(CRLF)
+
+	For i = 0 To clv2.Size - 1
+		Dim m As Map = clv2.GetValue(i)
+		sb.Append("# ").Append(i + 1).Append(CRLF)
+		sb.Append("Type: ").Append(m.GetDefault("event_type", "")).Append(CRLF)
+		sb.Append("Value: ").Append(m.GetDefault("value", "")).Append(CRLF)
+		sb.Append("Description: ").Append(m.GetDefault("description", "")).Append(CRLF)
+		sb.Append("Tags: ").Append(m.GetDefault("tags", "")).Append(CRLF)
+		sb.Append("Time: ").Append(m.GetDefault("time", "")).Append(CRLF)
+		sb.Append("Lunar: ").Append(MP.ResolveEventLunarText(m.GetDefault("time", ""), m.GetDefault("lunar_text", ""))).Append(CRLF)
+		sb.Append("--------------------------------").Append(CRLF)
+	Next
+
+	DateTime.DateFormat = "yyyyMMdd"
+	DateTime.TimeFormat = "HHmmss"
+	Dim fileName As String = "search_results_" & DateTime.Date(DateTime.Now) & "_" & DateTime.Time(DateTime.Now) & ".txt"
+	File.WriteString(xui.DefaultFolder, fileName, sb.ToString)
+
+	#If B4A
+	Dim in As InputStream = File.OpenInput(xui.DefaultFolder, fileName)
+	Wait For (SaveFile(in, "text/plain", fileName)) Complete (Success As Boolean)
+	in.Close
+	If Success Then
+		xui.MsgboxAsync("搜索结果已导出为 TXT（UTF-8）。", "导出TXT")
+	End If
+	#Else
+	xui.MsgboxAsync("搜索结果已导出为 TXT（UTF-8）:" & CRLF & File.Combine(xui.DefaultFolder, fileName), "导出TXT")
+	#End If
+
+End Sub
+
+#if b4a
+Sub SaveFile (Source As InputStream, MimeType As String, Title As String) As ResumableSub
+	Dim intent As Intent
+	intent.Initialize("android.intent.action.CREATE_DOCUMENT", "")
+	intent.AddCategory("android.intent.category.OPENABLE")
+	intent.PutExtra("android.intent.extra.TITLE", Title)
+	intent.SetType(MimeType)
+	StartActivityForResult(intent)
+	Wait For ion_Event (MethodName As String, Args() As Object)
+	If -1 = Args(0) Then
+		Dim result As Intent = Args(1)
+		Dim jo As JavaObject = result
+		Dim ctxt As JavaObject
+		Dim out As OutputStream = ctxt.InitializeContext.RunMethodJO("getContentResolver", Null).RunMethod("openOutputStream", Array(jo.RunMethod("getData", Null)))
+		File.Copy2(Source, out)
+		out.Close
+		Return True
+	End If
+	Return False
+End Sub
+
+Sub StartActivityForResult(i As Intent)
+	Dim jo As JavaObject = GetBA
+	ion = jo.CreateEvent("anywheresoftware.b4a.IOnActivityResult", "ion", Null)
+	jo.RunMethod("startActivityForResult", Array(ion, i))
+End Sub
+
+Sub GetBA As Object
+	Dim jo As JavaObject = Me
+	Return jo.RunMethod("getBA", Null)
+End Sub
+#end if

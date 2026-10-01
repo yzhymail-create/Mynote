@@ -65,7 +65,7 @@ Module9=|relative|..\Regist_Page
 NumberOfFiles=16
 NumberOfLibraries=15
 NumberOfModules=12
-Version=13.4
+Version=13.5
 @EndOfDesignText@
 #Region  Project Attributes 
 	#ApplicationLabel: MyNote

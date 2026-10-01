@@ -37,6 +37,6 @@ ModuleClosedNodes6=
 ModuleClosedNodes7=
 ModuleClosedNodes8=
 ModuleClosedNodes9=
-NavigationStack=Synchorize,Class_Globals,0,0,Visual Designer,sycview.bal,-100,1,Visual Designer,Page2Left.bal,-100,1,Visual Designer,Login.bal,-100,1,Visual Designer,Card.bal,-100,1,Visual Designer,DataCards.bal,-100,1,Visual Designer,login_view.bal,-100,1,Visual Designer,regist_page.bal,-100,1,Visual Designer,ViewCard.bal,-100,4,B4XPageData,Class_Globals,6,0,B4XPageData,B4XPage_Created,55,0
+NavigationStack=Visual Designer,Login.bal,-100,6,B4XMainPage,DatabaseNeedsMigrationByName,176,0,NoteView,B4XPage_Appear,180,0,NoteView,B4XPage_Resize,450,0,Search,Class_Globals,0,0,Visual Designer,Page2Left.bal,-100,6,Starter,Process_Globals,5,0,NoteView,Class_Globals,0,0,Visual Designer,ViewCard.bal,-100,6,B4XPageData,Class_Globals,0,0
 SelectedBuild=0
 VisibleModules=1,2,3,5,7,9,12,10,4,6

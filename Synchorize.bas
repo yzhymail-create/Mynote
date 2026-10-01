@@ -79,6 +79,7 @@ End Sub
 	Dim Rs As ResultSet
 	Dim id_user As String = MP.KVS.Get("id_user")
 	mm.id_user = MP.KVS.Get("id_user")
+	Dim hasUuid As Boolean = MP.EventsUseUuid
 	Dim l As List
 	'get new data
 	 Query  = "SELECT * FROM events WHERE id_user = ? AND new = ?"
@@ -87,7 +88,7 @@ End Sub
 		l.Initialize
 		l.AddAll(Array As String (Rs.GetString("id_user"),Rs.GetString("month"),Rs.GetString("event_type"), _
 		Rs.GetString("description"),Rs.GetString("value"),Rs.GetString("year"),Rs.GetString("time"), _ 
-		Rs.GetString("timestamp"),True,False,False))
+		Rs.GetString("timestamp"),True,False,False, IIf(hasUuid, Rs.GetString("uuid"), "")))
 		mm.TX_newlist.Add(l)
 	Loop
 	Rs.Close
@@ -113,7 +114,7 @@ End Sub
 		l.AddAll(Array As String(Rs.GetString("event_type"), _
 		Rs.GetString("description"),Rs.GetString("value"), _ 
 		Rs.GetString("timestamp"),Rs.GetString("time"), _ 
-		True,False,False,Null))
+		True,False,False,IIf(hasUuid, Rs.GetString("uuid"), "")))
 		mm.TX_changedlist.Add(l )
 	Loop
 	Rs.Close
@@ -139,7 +140,9 @@ End Sub
 	Rs = MP.SQL1.ExecQuery2(Query,Array As String(id_user))
 	Do While Rs.NextRow 
 		l.Initialize
-		l.AddAll(Array As String(Rs.GetString("id_user"),Rs.GetString("deltime")))
+		Dim tombUuid As String = ""
+		If MP.HasColumn(MP.SQL1, "delevents", "deluuid") Then tombUuid = Rs.GetString("deluuid")
+		l.AddAll(Array As String(Rs.GetString("id_user"),Rs.GetString("deltime"), tombUuid))
 		mm.TX_dellist.Add(l)
 	Loop
 		
@@ -258,18 +261,15 @@ Sub AStream_NewData (Buffer() As Byte)                '//get the data from other
 					B4XLoadingIndicator1.Show
 					'delete the specile data
 		             If TX_del_flag =  True Then
-			           Query  = "SELECT * FROM events WHERE  id_user = ? AND time = ?"
 						For i = 0 To mm_get.TX_dellist.Size-1
 				            Dim l As List = mm_get.TX_dellist.Get(i)
-				            Dim  tem(l.size) As String
-						    For j = 0 To  l.Size-1
-								tem(j) = l.Get(j)
-				             Next
-							rs = MP.SQL1.ExecQuery2(Query,tem)
-							Do While rs.NextRow				
-					             MP.SQL1.ExecNonQuery2(MP.deleteEvents,Array As String (rs.GetInt2(0)))
-							Loop
-							rs.Close	
+							Dim delTime As String = l.Get(1)
+							Dim delUuid As String = ""
+							If l.Size > 2 Then delUuid = l.Get(2)
+							Dim deleteRowId As Long = MP.ResolveEventRowId(delUuid, delTime)
+							If deleteRowId > 0 Then
+								MP.SQL1.ExecNonQuery2(MP.deleteEvents,Array As String (deleteRowId))
+							End If
 						Next
 					End If
 			'refresh the data which has been changed
@@ -277,14 +277,17 @@ Sub AStream_NewData (Buffer() As Byte)                '//get the data from other
 				        Dim time1 As Long = 0
 				        Dim time2 As Long = 0
 						Dim time As String = ""
+					Dim remoteUuid As String = ""
 				        
-			            Query  = "SELECT rowid FROM events WHERE  id_user = ? AND time = ?"
 						For i = 0 To mm_get.TX_changedlist.Size-1
 				        Dim re_data As List 
 						re_data.Initialize
 				        re_data = mm_get.TX_changedlist.Get(i) 
 							tem_time = re_data.Get(4)
-							rs = MP.SQL1.ExecQuery2(Query,Array As String(id_user,tem_time))
+							If re_data.Size > 8 Then remoteUuid = re_data.Get(8) Else remoteUuid = ""
+							Paremeters = MP.ResolveEventRowId(remoteUuid, tem_time)
+							If Paremeters <= 0 Then Continue
+							rs = MP.SQL1.ExecQuery2("SELECT rowid FROM events WHERE rowid = ?",Array As String(Paremeters))
 							Do While rs.NextRow
 						      Paremeters = rs.GetInt2(0)
 					          time1  = re_data.Get(3)
@@ -294,7 +297,7 @@ Sub AStream_NewData (Buffer() As Byte)                '//get the data from other
 						     If time1 > time2 Then
 						        time = re_data.Get(3)
 '						        Dim tem_arr() As String = Array As String (re_data(0),re_data(1),re_data(2),time,re_data(5),re_data(6),re_data(7),rs.GetInt2(0))				     
-						        Dim tem_arr() As String = Array As String (re_data.get(0),re_data.get(1),re_data.get(2),time,re_data.get(5),re_data.get(6),re_data.get(7),rs.GetInt2(0))
+							    Dim tem_arr() As String = Array As String (re_data.get(0),re_data.get(1),re_data.get(2),MP.BuildTagsPayload(re_data.get(0), re_data.get(1), re_data.get(2)),MP.BuildAttachmentsPayload(re_data.get(0), re_data.get(1), re_data.get(2)),time,re_data.get(5),re_data.get(6),re_data.get(7),MP.BuildEventLunarText(re_data.Get(4)),rs.GetInt2(0))
 
 								 MP.SQL1.ExecNonQuery2(MP.sycEvents,tem_arr)
 						     End If
@@ -311,7 +314,7 @@ Sub AStream_NewData (Buffer() As Byte)                '//get the data from other
 							For j = 0 To  l.Size-1
 								tem(j) = l.Get(j)
 							Next
-				            MP.SQL1.ExecNonQuery2(MP.addEvents,tem)
+					            MP.SQL1.ExecNonQuery2(MP.addEvents, MP.NormalizeEventInsertParameters(tem))
 		            Next
 				  End If
 		End If

@@ -15,9 +15,6 @@ Sub Class_Globals
 	'Private IME As IME
 	Private Const OkChar As String = Chr(0xF14A)
 	Private Btx3 As B4XView
-	Private pnlFloatBall As Panel
-	Private BallLastY As Float
-	Private BallActive As Boolean
 	#END IF
 	
 	#IF B4J
@@ -27,6 +24,7 @@ Sub Class_Globals
 	#END IF
 	
 	Private LabTime As B4XView
+	Private LabTime2 As B4XView
 	Private Btx1 As B4XFloatTextField
 	Private Btx2 As B4XFloatTextField
 	Private wvSearchPreview As WebView
@@ -57,11 +55,11 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 '	Drawer.LeftPanel.LoadLayout("Page2Left")
 	#if B4A
 	'IME.Initialize("IME")
-	SetupFloatingBall
 	#END IF
 	wvSearchPreview.Initialize("wvSearchPreview")
 	Root.AddView(wvSearchPreview, Btx3.Left, Btx3.Top, Btx3.Width, Btx3.Height)
 	wvSearchPreview.Visible = False
+	ConfigureTimeLabels
 	CreateMenu
 End Sub
 
@@ -83,25 +81,18 @@ Private Sub BntOK_Click
 					PageData.note_Paremeters = Array As String(B4XPages.MainPage.KVS.Get("id_user"),PageData.Nowday_Month,Btx1.Text,Btx3.Text,Btx2.Text, PageData.Nowday_Year,NowTime,timestamp,False,True,False)
 				End If
 				If PageData.Edit_Flag = True Then
-					'get the rowid
-					Dim time As String = PageData.Show_m.Get("time")
-					Dim  ResultSet1 As ResultSet
-					Dim Query As String = "SELECT RowId FROM events WHERE time = ?"
-					ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (time))
-					Do While ResultSet1.NextRow
-						Dim Rowid As Long = ResultSet1.Getint2(0)
-					Loop
-					ResultSet1.Close
+					Dim Rowid As Long = MP.ResolveEventRowIdFromMap(PageData.Show_m)
 					If Rowid > 0 Then
+						MP.EnsureEventUuidForRow(Rowid)
 						'get the state of syc_flag
-						Query = "SELECT sync_flag from events WHERE rowid = ?"
+						Dim Query As String = "SELECT sync_flag from events WHERE rowid = ?"
 						Dim tem_sync_flag As String = MP.SQL1.ExecQuerySingleResult2(Query,Array As String(Rowid))
 						If tem_sync_flag = True Then
 							Dim tem_changed As Boolean = True
 						Else
 							Dim tem_changed As Boolean = False
 						End If
-						PageData.note_Paremeters = Array As String(Btx1.Text, Btx3.Text, Btx2.Text,timestamp,tem_changed,Rowid)
+						PageData.note_Paremeters = Array As String(Btx1.Text, Btx3.Text, Btx2.Text,MP.BuildTagsPayload(Btx1.Text, Btx3.Text, Btx2.Text),MP.BuildAttachmentsPayload(Btx1.Text, Btx3.Text, Btx2.Text),timestamp,tem_changed,Rowid)
 					Else
 						ToastMessage.Show("ERROR！")
 					End If
@@ -178,12 +169,12 @@ Sub B4XPage_Appear
 		Btx2.Text = PageData.Show_m.Get("value")
 		Sleep(0)
 		Btx3.Text = PageData.Show_m.Get("description")
-		LabTime.Text = PageData.Show_m.Get("time")
+		SetFooterTimeDisplay(PageData.Show_m.Get("time"), PageData.Show_m.GetDefault("lunar_text", ""))
 		
 	Else If Search_view.Edit_Flag = True Then
 		Btx1.Text = Search_view.Show_m.Get("event_type")
 		Btx2.Text = Search_view.Show_m.Get("value")
-		LabTime.Text = Search_view.Show_m.Get("time")
+		SetFooterTimeDisplay(Search_view.Show_m.Get("time"), Search_view.Show_m.GetDefault("lunar_text", ""))
 		Sleep(0)
 		Btx3.Text = Search_view.Show_m.Get("description")
 		ApplySearchHit(Search_view.Show_m)
@@ -192,12 +183,50 @@ Sub B4XPage_Appear
 		Btx1.Text = ""
 		Btx2.Text = ""
 		Btx3.Text = ""
-		LabTime.Text = ""
+		SetFooterTimeDisplay(BuildCurrentEventTime, "")
 	End If
 	#If B4A
-	If SearchPreviewActive = False Then UpdateFloatingBallLayout
+	If SearchPreviewActive = False Then EnsureEditorCaretVisible
 	#End If
 	Ok_Flag = False
+End Sub
+
+Private Sub ConfigureTimeLabels
+	If LabTime.IsInitialized = False Then Return
+	LabTime.TextColor = xui.Color_Gray
+	ConfigureFooterLabel(LabTime)
+	If LabTime2.IsInitialized Then
+		LabTime2.TextColor = xui.Color_Gray
+		ConfigureFooterLabel(LabTime2)
+	End If
+End Sub
+
+Private Sub SetFooterTimeDisplay (RawTime As String, LunarText As String)
+	Dim resolvedLunar As String = MP.ResolveEventLunarText(RawTime, LunarText)
+	LabTime.Text = RawTime
+	If LabTime2.IsInitialized Then
+		LabTime2.Text = resolvedLunar
+	Else
+		LabTime.Text = MP.BuildEventDisplayTime(RawTime, resolvedLunar)
+	End If
+End Sub
+
+Private Sub ConfigureFooterLabel(TargetLabel As B4XView)
+	#If B4A
+	Dim lbl As Label = TargetLabel
+	lbl.SingleLine = False
+	#Else If B4J
+	Dim lbl As Label = TargetLabel
+	lbl.WrapText = True
+	#End If
+	Dim minHeight As Int = 22dip
+	If TargetLabel.Height < minHeight Then
+		TargetLabel.SetLayoutAnimated(0, TargetLabel.Left, TargetLabel.Top, TargetLabel.Width, minHeight)
+	End If
+End Sub
+
+Private Sub BuildCurrentEventTime As String
+	Return DateTime.Date(DateTime.Now) & "_" & DateTime.Time(DateTime.Now) & "_" & DateUtils.GetDayOfWeekName(DateTime.Now)
 End Sub
 
 Private Sub ApplySearchHit (SearchMap As Map)
@@ -223,9 +252,6 @@ Private Sub EnableSearchHighlightPreview (Keyword As String, HitField As String)
 	wvSearchPreview.Visible = True
 	Btx3.Visible = False
 	SearchPreviewActive = True
-	#If B4A
-	If pnlFloatBall.IsInitialized Then pnlFloatBall.Visible = False
-	#End If
 	Root.GetView(Root.NumberOfViews - 1).BringToFront
 End Sub
 
@@ -233,14 +259,12 @@ Private Sub DisableSearchHighlightPreview
 	SearchPreviewActive = False
 	If wvSearchPreview.IsInitialized Then wvSearchPreview.Visible = False
 	If Btx3.IsInitialized Then Btx3.Visible = True
-	#If B4A
-	If pnlFloatBall.IsInitialized Then pnlFloatBall.Visible = True
-	#End If
 End Sub
 
 Private Sub UpdateSearchPreviewLayout
 	If wvSearchPreview.IsInitialized = False Then Return
-	wvSearchPreview.SetLayoutAnimated(0, Btx3.Left, Btx3.Top, Btx3.Width, Btx3.Height)
+	Dim webViewContainer As B4XView = wvSearchPreview
+	webViewContainer.SetLayoutAnimated(0, Btx3.Left, Btx3.Top, Btx3.Width, Btx3.Height)
 End Sub
 
 Private Sub BuildSearchPreviewHtml (Keyword As String, HitField As String) As String
@@ -327,86 +351,43 @@ Private Sub HtmlEncode (Text As String) As String
 	Return Text.Replace(CRLF, "<br/>").Replace(Chr(13), "<br/>").Replace(Chr(10), "<br/>")
 End Sub
 
-
 #If B4A
-Private Sub SetupFloatingBall
-	pnlFloatBall.Initialize("pnlFloatBall")
-	Dim ballSize As Int = 56dip
-	Root.AddView(pnlFloatBall, 0, 0, ballSize, ballSize)
-	Dim ball As B4XView = pnlFloatBall
-	ball.SetColorAndBorder(xui.Color_ARGB(120, 70, 70, 70), 1dip, xui.Color_ARGB(160, 255, 255, 255), ballSize / 2)
-	ball.Alpha = 0.78
-	UpdateFloatingBallLayout
-End Sub
-
-Private Sub UpdateFloatingBallLayout
-	If pnlFloatBall.IsInitialized = False Then Return
-	Dim ballSize As Int = pnlFloatBall.Width
-	If ballSize <= 0 Then ballSize = 56dip
-	Dim left As Int = Root.Width - ballSize - 8dip
-	Dim top As Int = Btx3.Top + (Btx3.Height - ballSize) / 2
-	top = Max(Btx3.Top + 6dip, Min(top, Btx3.Top + Btx3.Height - ballSize - 6dip))
-	pnlFloatBall.SetLayoutAnimated(0, left, top, ballSize, ballSize)
-	Root.GetView(Root.NumberOfViews - 1).BringToFront
-End Sub
-
-Private Sub pnlFloatBall_Touch (Action As Int, X As Float, Y As Float)
-	Select Action
-		Case 0 'down
-			BallActive = True
-			BallLastY = Y
-		Case 2 'move
-			If BallActive = False Then Return
-			Dim dy As Float = Y - BallLastY
-			BallLastY = Y
-			ScrollByBallDrag(dy)
-		Case 1, 3 'up / cancel
-			BallActive = False
-	End Select
-End Sub
-
-Private Sub ScrollByBallDrag (DragDeltaY As Float)
-	Dim absDelta As Float = Abs(DragDeltaY)
-	If absDelta < 4dip Then Return
-	Dim level As Int = Ceil(absDelta / 20dip)
-	Dim lines As Int = Max(3, level * 3)
-	Dim px As Int = lines * GetEditorLineHeight
-	If DragDeltaY < 0 Then
-		'finger up -> text content moves up (next lines)
-		ScrollEditorBy(px)
-	Else
-		ScrollEditorBy(-px)
-	End If
-End Sub
-
-Private Sub GetEditorLineHeight As Int
-	Dim et As EditText = Btx3
-	Dim jo As JavaObject = et
-	Dim h As Int = jo.RunMethod("getLineHeight", Null)
-	Return Max(14dip, h)
-End Sub
-#End If
-
-Private Sub ScrollEditorBy (DeltaY As Int)
-	#If B4A
+Private Sub EnsureEditorCaretVisible
+	If Btx3.IsInitialized = False Then Return
+	If SearchPreviewActive Then Return
 	Dim et As EditText = Btx3
 	Dim jo As JavaObject = et
 	Dim rawLayout As Object = jo.RunMethod("getLayout", Null)
 	If rawLayout = Null Then Return
 	Dim layout As JavaObject = rawLayout
+	Dim cursor As Int = jo.RunMethod("getSelectionStart", Null)
+	If cursor < 0 Then cursor = et.Text.Length
+	Dim line As Int = layout.RunMethod("getLineForOffset", Array(cursor))
+	Dim lineTop As Int = layout.RunMethod("getLineTop", Array(line))
+	Dim lineBottom As Int = layout.RunMethod("getLineBottom", Array(line))
 	Dim currentY As Int = jo.RunMethod("getScrollY", Null)
+	Dim viewHeight As Int = et.Height
+	Dim padding As Int = 24dip
+	Dim targetY As Int = currentY
+	If lineBottom > currentY + viewHeight - padding Then
+		targetY = lineBottom - viewHeight + padding
+	Else If lineTop < currentY + padding Then
+		targetY = lineTop - padding
+	End If
 	Dim contentHeight As Int = layout.RunMethod("getHeight", Null)
-	Dim maxY As Int = Max(0, contentHeight - et.Height)
-	Dim targetY As Int = Max(0, Min(maxY, currentY + DeltaY))
-	jo.RunMethod("scrollTo", Array(0, targetY))
-	#Else If B4J
-	Dim ta As TextArea = Btx3
-	Dim jo As JavaObject = ta
-	Dim currentY As Double = jo.RunMethod("getScrollTop", Null)
-	Dim targetY As Double = Max(0, currentY + DeltaY)
-	jo.RunMethod("setScrollTop", Array(targetY))
-	#End If
+	Dim maxY As Int = Max(0, contentHeight - viewHeight)
+	targetY = Max(0, Min(maxY, targetY))
+	If targetY <> currentY Then jo.RunMethod("scrollTo", Array(0, targetY))
 End Sub
+
+Private Sub Btx3_TextChanged (Old As String, New As String)
+	EnsureEditorCaretVisible
+End Sub
+
+Private Sub Btx3_FocusChanged (HasFocus As Boolean)
+	If HasFocus Then EnsureEditorCaretVisible
+End Sub
+#End If
 
 
 
@@ -449,32 +430,18 @@ Private Sub B4XPage_MenuClick (Tag As String)
 				If PageData.Add_Flag = True Then
 						PageData.note_Paremeters = Array As String(B4XPages.MainPage.KVS.Get("id_user"),PageData.Nowday_Month,Btx1.Text,Btx3.Text,Btx2.Text, PageData.Nowday_Year,NowTime,timestamp,False,True,False)
 				End If
-				If PageData.Edit_Flag = True Then
-						'get the rowid
-						Dim time As String = PageData.Show_m.Get("time")
-						Dim  ResultSet1 As ResultSet
-						Dim Query As String = "SELECT RowId FROM events WHERE time = ?"
-						ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (time))
-							Do While ResultSet1.NextRow
-								Dim Rowid As Long = ResultSet1.Getint2(0)
-							Loop
-						ResultSet1.Close
-					If Rowid > 0 Then
-						'get the state of syc_flag
-						Query = "SELECT sync_flag from events WHERE rowid = ?"
-								Dim tem_sync_flag As String = MP.SQL1.ExecQuerySingleResult2(Query,Array As String(Rowid))
-						If tem_sync_flag = True Then
-							Dim tem_changed As Boolean = True
-						Else
-							Dim tem_changed As Boolean = False
-						End If 
-						PageData.note_Paremeters = Array As String(Btx1.Text, Btx3.Text, Btx2.Text,timestamp,tem_changed,Rowid)
-				    Else
-						  ToastMessage.Show("ERROR！")
-					End If 
+				If IsEditingExistingEvent Then
+					Dim updateParams() As Object = BuildUpdateEventParameters(timestamp)
+					If updateParams = Null Then
+						ToastMessage.Show("ERROR！")
+						Ok_Flag = False
+						Return
+					End If
+					MP.SQL1.ExecNonQuery2(MP.updateEvents, updateParams)
+					ClearEditFlags
 				End If
 					
-				PageData.Re_Flag = True
+				If PageData.Add_Flag Then PageData.Re_Flag = True
 				Btx1.Text=""
 				Btx2.Text=""
 				Btx3.Text=""
@@ -490,10 +457,6 @@ End Sub
 Private Sub B4XPage_CloseRequest As ResumableSub
 
 	DisableSearchHighlightPreview
-	PageData.Add_Flag = False
-	PageData.Re_Flag = False
-	PageData.Edit_Flag = False
-	Search_view.Edit_Flag = False
 	Return True
 End Sub
 
@@ -505,32 +468,14 @@ Private Sub B4XPage_Disappear
 		Dim NowTime As String = DateTime.Date(DateTime.Now)&"_"&DateTime.time(DateTime.Now)&"_"&DateUtils.GetDayOfWeekName(DateTime.Now)
 	
 		PageData.note_Paremeters = Array As String(B4XPages.MainPage.KVS.Get("id_user"),PageData.Nowday_Month,Btx1.Text,Btx3.Text,Btx2.Text, PageData.Nowday_Year,NowTime,timestamp,False,True,False)
-		MP.SQL1.ExecNonQuery2(MP.addEvents,PageData.Note_Paremeters)
+		MP.SQL1.ExecNonQuery2(MP.addEvents, MP.NormalizeEventInsertParameters(PageData.Note_Paremeters))
 		PageData.Add_Flag = False
-	else if PageData.Edit_Flag = True And Ok_Flag = False Then
-		
-		'get the rowid
-		Dim time As String = PageData.Show_m.Get("time")
-		Dim  ResultSet1 As ResultSet
-		Dim Query As String = "SELECT RowId FROM events WHERE time = ?"
-		ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (time))
-		Do While ResultSet1.NextRow
-			Dim Rowid As Long = ResultSet1.Getint2(0)
-		Loop
-		ResultSet1.Close
-		If Rowid > 0 Then
-			'get the state of syc_flag
-			Query = "SELECT sync_flag from events WHERE rowid = ?"
-			Dim tem_sync_flag As String = MP.SQL1.ExecQuerySingleResult2(Query,Array As String(Rowid))
-			If tem_sync_flag = True Then
-				Dim tem_changed As Boolean = True
-			Else
-				Dim tem_changed As Boolean = False
-			End If
-			PageData.note_Paremeters = Array As String(Btx1.Text, Btx3.Text, Btx2.Text,timestamp,tem_changed,Rowid)
+	else if IsEditingExistingEvent And Ok_Flag = False Then
+		Dim updateParams() As Object = BuildUpdateEventParameters(timestamp)
+		If updateParams <> Null Then
+			MP.SQL1.ExecNonQuery2(MP.updateEvents, updateParams)
 		End If
-		MP.SQL1.ExecNonQuery2(MP.updateEvents,PageData.Note_Paremeters)
-		PageData.Edit_Flag = False
+		ClearEditFlags
 	End If
 
 End Sub
@@ -542,7 +487,7 @@ End Sub
 Private Sub B4XPage_Resize (Width As Int, Height As Int)
 	UpdateSearchPreviewLayout
 	#If B4A
-	If SearchPreviewActive = False Then UpdateFloatingBallLayout
+	If SearchPreviewActive = False Then EnsureEditorCaretVisible
 	#End If
 End Sub
 
@@ -564,4 +509,33 @@ Private Sub Btx3_EnterPressed
 	#IF B4A
 	'IME.HideKeyboard
 	#END IF
+End Sub
+
+Private Sub IsEditingExistingEvent As Boolean
+	Return PageData.Edit_Flag Or Search_view.Edit_Flag
+End Sub
+
+Private Sub GetActiveEditMap As Map
+	If Search_view.Edit_Flag Then Return Search_view.Show_m
+	Return PageData.Show_m
+End Sub
+
+Private Sub BuildUpdateEventParameters (Timestamp As String) As Object()
+	Dim currentEvent As Map = GetActiveEditMap
+	If currentEvent.IsInitialized = False Then Return Null
+	Dim Rowid As Long = MP.ResolveEventRowIdFromMap(currentEvent)
+	If Rowid <= 0 Then Return Null
+	MP.EnsureEventUuidForRow(Rowid)
+	Dim Query As String = "SELECT sync_flag from events WHERE rowid = ?"
+	Dim tem_sync_flag As String = MP.SQL1.ExecQuerySingleResult2(Query,Array As String(Rowid))
+	Dim tem_changed As Boolean = (tem_sync_flag = True)
+	Dim rawTime As String = currentEvent.GetDefault("time", "")
+	Dim lunarText As String = MP.ResolveEventLunarText(rawTime, currentEvent.GetDefault("lunar_text", ""))
+	Return Array As Object(Btx1.Text, Btx3.Text, Btx2.Text, MP.BuildTagsPayload(Btx1.Text, Btx3.Text, Btx2.Text), MP.BuildAttachmentsPayload(Btx1.Text, Btx3.Text, Btx2.Text), Timestamp, tem_changed, lunarText, Rowid)
+End Sub
+
+Private Sub ClearEditFlags
+	PageData.Edit_Flag = False
+	Search_view.Edit_Flag = False
+	PageData.Re_Flag = False
 End Sub

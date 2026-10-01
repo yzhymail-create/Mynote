@@ -107,8 +107,8 @@ Sub AddEntry As Boolean
 		Return False
 	End If
 
-	If Regex.IsMatch("^\d{6}$", Password1) = False Then
-		ToastMessage.Show("请设置6位数字密码！")
+	If Regex.IsMatch("^\d{4,}$", Password1) = False Then
+		ToastMessage.Show("请设置不少于4位的数字密码！")
 		Return False
 	End If
 
@@ -119,7 +119,7 @@ Sub AddEntry As Boolean
 
 	
 	'first we check if the entry already does exist
-	Query = "SELECT * FROM users WHERE name = ?"
+	Query = "SELECT * FROM users WHERE nickname = ?"
 	ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (username))
 
 	If ResultSet1.NextRow = True Then
@@ -170,8 +170,8 @@ private Sub Modify
 		Return
 	End If
 
-	If Regex.IsMatch("^\d{6}$", Password1) = False Then
-		ToastMessage.Show("请设置6位数字密码！")
+	If Regex.IsMatch("^\d{4,}$", Password1) = False Then
+		ToastMessage.Show("请设置不少于4位的数字密码！")
 		Modify_flag = False
 		Return
 	End If
@@ -216,8 +216,6 @@ Private Sub Bntok_Click
 		MP.check_in = False
 		B4XPages.ShowPageAndRemovePreviousPages("MainPage")
 '		B4XPages.ShowPage("MainPage")
-	Else
-		ToastMessage.Show("请按提示完成信息！")
 	End If
 End Sub
 
@@ -257,10 +255,12 @@ Private Sub btnTerms_Click
 	cs.Initialize.Color(xui.Color_Blue).Typeface(Typeface.DEFAULT_BOLD).Size(13).Append(LongTextTemplate.text).PopAll
 	LongTextTemplate.Text =cs
 	LongTextTemplate.CustomListView1.DefaultTextBackgroundColor = xui.Color_Yellow
-	LongTextTemplate.Resize(pnlBottom.Width,6*pnlBottom.Height)
+	Dim dlgWidth As Int = Max(240dip, Min(Root.Width - 24dip, 520dip))
+	Dim dlgHeight As Int = Max(220dip, Min(Root.Height - 48dip, Root.Height * 0.75))
+	LongTextTemplate.Resize(dlgWidth, dlgHeight)
 	Dim sf As Object = Dialog.ShowTemplate(LongTextTemplate, "OK", "", "")
 	Sleep(0)
-	LongTextTemplate.CustomListView1.sv.ScrollViewOffsetY = LongTextTemplate.CustomListView1.sv.ScrollViewContentHeight
+	LongTextTemplate.CustomListView1.sv.ScrollViewOffsetY = 0
 	Wait For (sf) Complete (Result As Int)
 End Sub
 #end if
@@ -274,10 +274,13 @@ Private Sub btnTerms_MouseClicked (EventData As MouseEvent)
 	LongTextTemplate.Text = tem
 	
 	
-	LongTextTemplate.Resize(pnlBottom.Width,6*pnlBottom.Height)
+	Dim dlgWidth As Int = Max(300dip, Min(Root.Width - 24dip, 640dip))
+	Dim dlgHeight As Int = Max(260dip, Min(Root.Height - 48dip, Root.Height * 0.75))
+	LongTextTemplate.Resize(dlgWidth, dlgHeight)
 	LongTextTemplate.CustomListView1.DefaultTextBackgroundColor = xui.Color_Gray
 
-	Dialog.ShowTemplate(LongTextTemplate, "OK", "", "")
+	Dim sf As Object = Dialog.ShowTemplate(LongTextTemplate, "OK", "", "")
+	Wait For (sf) Complete (Result As Int)
 End Sub
 #End If
 

@@ -73,7 +73,7 @@ Version=10.5
 	#PackagerProperty: IconFile = ..\Files\mynote.ico
      #PackagerProperty: ExeName = MyNote
 	 #CustomBuildAction: After Packager, C:\Program Files (x86)\Inno Setup 6\Compil32.exe, /cc ../InstallerScript.iss
-	 #PackagerProperty: IncludedModules = jdk.localedata
+	 #PackagerProperty: IncludedModules = jdk.localedata,javafx.web
 #End Region
 
 Sub Process_Globals

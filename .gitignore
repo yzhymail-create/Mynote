@@ -22,3 +22,6 @@ mynote_jrdc2/jRDC/AutoBackups/
 B4A/*.apk
 B4J/*.exe
 
+# JVM crash logs
+hs_err_pid*.log
+

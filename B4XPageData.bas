@@ -39,6 +39,11 @@ Sub Class_Globals
 	Public Show_m As Map
 	Public Edit_Index As Int
 	Private BntSearch As Button
+	Private user As B4XView
+	Private btnAboutInfo As B4XView
+	Private btnAbout As B4XView
+	Private BntAbout As B4XView
+	Private about As B4XView
 End Sub
 
 'You can add more parameters here.
@@ -57,6 +62,8 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Drawer.Initialize(Me, "Drawer", Root, 200dip)
 	Drawer.CenterPanel.LoadLayout("DataCards")
 	Drawer.LeftPanel.LoadLayout("Page2Left")
+	RefreshUserLabel
+	BindAboutButton
 	'B4XPages.SetTitle(Me,"Data Cards")
 	B4XPages.SetTitle(Me,"Note")
 	HamburgerIcon = CreateHamburgerIconBitmap(32dip, xui.Color_White)
@@ -171,21 +178,20 @@ Sub PopulateCards (year As String,Month As String)
 	Dim rs As ResultSet
 	B4XLoadingIndicator1.Show
 	Dim Paremeters()  As String = Array As String(year,Month,MP.KVS.Get("id_user") )
-	Dim time As String
+	Dim hasUuid As Boolean = MP.EventsUseUuid
+	Dim hasLunarText As Boolean = MP.EventsUseLunarText
 	rs = MP.SQL1.ExecQuery2(MP.getEvents,Paremeters)
-	Dim  ResultSet1 As ResultSet
-	Dim Query As String = "SELECT RowId FROM events WHERE time = ?"
 	Dim id As Long
 	Dim mapData As Map
 	Dim p As B4XView
 		Do While rs.NextRow
-			 time = rs.GetString("time")
-			 ResultSet1 = MP.SQL1.ExecQuery2(Query, Array As String (time))
-			Do While ResultSet1.NextRow
-				 id = ResultSet1.Getint2(0)
-			Loop
-			ResultSet1.Close
-		        mapData = CreateMap("id":id,"event_type":rs.GetString("event_type"),"description":rs.GetString("description"),"value":rs.GetString("value"),"time":rs.GetString("time"))
+			Dim eventUuid As String = ""
+			If hasUuid Then eventUuid = rs.GetString("uuid")
+			Dim lunarText As String = ""
+			If hasLunarText Then lunarText = rs.GetString("lunar_text")
+			lunarText = MP.ResolveEventLunarText(rs.GetString("time"), lunarText)
+			 id = MP.ResolveEventRowId(eventUuid, rs.GetString("time"))
+		        mapData = CreateMap("id":id,"uuid":eventUuid,"event_type":rs.GetString("event_type"),"description":rs.GetString("description"),"value":rs.GetString("value"),"time":rs.GetString("time"),"lunar_text":lunarText)
 				p = CreateCard(mapData)
 				clvData.Add(p, mapData)
 		Loop
@@ -242,12 +248,13 @@ Private Sub lblDelete_Click
 	Dim sf As Object = xui.Msgbox2Async("Delete event?", "WARNING !", "Yes", "Cancel", "No", Null)
 	Wait For (sf) Msgbox_Result (Result As Int)
 	If Result = xui.DialogResponse_Positive Then
-		Dim Paremeters As String = m.Get("id")
+		Dim Paremeters As Long = MP.ResolveEventRowIdFromMap(m)
+		If Paremeters <= 0 Then Return
 		B4XLoadingIndicator1.Show
 		'record this message in deltime tab in db 
 		Dim Query As String  = "SELECT time from events WHERE rowid = ?" 
 		Dim tem_time As String =  MP.SQL1.ExecQuerySingleResult2(Query,Array As String(Paremeters))
-		MP.SQL1.ExecNonQuery2("INSERT INTO delevents VALUES(?,?)" ,Array As String(MP.KVS.Get("id_user"),tem_time))
+		MP.InsertDeleteEventTombstone(MP.KVS.Get("id_user"), m.GetDefault("uuid", ""), tem_time)
 		MP.SQL1.ExecNonQuery2(MP.deleteEvents ,Array As String(Paremeters))
 		clvData.RemoveAt(Index)
 		B4XLoadingIndicator1.Hide
@@ -260,7 +267,7 @@ Private Sub AddCard
 	'By default, we will insert the card of the same month we're seeing. You can change it later
 	Data.Put("month", pmDate.SelectedValue)
 
-	MP.SQL1.ExecNonQuery2(MP.addEvents,Note_Paremeters)
+	MP.SQL1.ExecNonQuery2(MP.addEvents, MP.NormalizeEventInsertParameters(Note_Paremeters))
 
 	PopulateCards(Select_Year,pmDate.SelectedValue)
 End Sub
@@ -273,6 +280,8 @@ End Sub
 
 
 Private Sub B4XPage_Appear
+	RefreshUserLabel
+	BindAboutButton
 	#if B4A
 	Sleep(0)
 	B4XPages.GetManager.ActionBar.RunMethod("setDisplayHomeAsUpEnabled", Array(True))
@@ -292,6 +301,83 @@ Private Sub B4XPage_Appear
 		PopulateCards(Select_Year,pmDate.SelectedValue)
 	End If
 	
+End Sub
+
+	Private Sub BindAboutButton
+		If BntAbout.IsInitialized Then
+			btnAboutInfo = BntAbout
+		Else If btnAbout.IsInitialized Then
+			btnAboutInfo = btnAbout
+		Else If about.IsInitialized Then
+			btnAboutInfo = about
+		Else If btnAboutInfo.IsInitialized = False Then
+			CreateAboutButton
+		End If
+		If btnAboutInfo.IsInitialized Then btnAboutInfo.Text = "关于说明"
+	End Sub
+
+	Private Sub CreateAboutButton
+		Dim btn As Button
+		btn.Initialize("btnAboutInfo")
+		btnAboutInfo = btn
+		btnAboutInfo.Text = "关于说明"
+		Dim leftMargin As Int = 10dip
+		Dim topPos As Int = 10dip
+		For i = 0 To Drawer.LeftPanel.NumberOfViews - 1
+			Dim child As B4XView = Drawer.LeftPanel.GetView(i)
+			topPos = Max(topPos, child.Top + child.Height + 8dip)
+		Next
+		Dim buttonWidth As Int = Max(100dip, Drawer.LeftPanel.Width - leftMargin * 2)
+		Dim buttonHeight As Int = 44dip
+		If topPos + buttonHeight > Drawer.LeftPanel.Height - 10dip Then
+			topPos = Max(10dip, Drawer.LeftPanel.Height - buttonHeight - 10dip)
+		End If
+		Drawer.LeftPanel.AddView(btnAboutInfo, leftMargin, topPos, buttonWidth, buttonHeight)
+	End Sub
+
+	Private Sub ShowAboutInfo
+		Drawer.LeftOpen = False
+		Dim message As String = BuildAboutMessage
+		xui.MsgboxAsync(message, "关于说明")
+	End Sub
+
+	Private Sub BuildAboutMessage As String
+		Dim sb As StringBuilder
+		sb.Initialize
+		sb.Append("MyNote").Append(CRLF)
+		sb.Append("版本: ").Append(MP.GetAppVersionText).Append(CRLF)
+		sb.Append("最近更新时间: ").Append(MP.APP_LAST_UPDATE_TEXT).Append(CRLF).Append(CRLF)
+		sb.Append("说明:").Append(CRLF)
+		sb.Append("1. 本应用用于本地记录日记、密码与检索内容。").Append(CRLF)
+		sb.Append("2. 当前页面左侧栏可直接导出 TXT、查看用户昵称与打开本说明。")
+		Return sb.ToString
+	End Sub
+
+	Private Sub RefreshUserLabel
+		If user.IsInitialized = False Then Return
+		Dim displayName As String = MP.KVS.GetDefault("user", "")
+		If displayName = "" Then displayName = MP.User_Name
+		If displayName = "" Then
+			user.Text = "用户: 未登录"
+		Else
+			user.Text = "用户: " & displayName
+		End If
+	End Sub
+
+Private Sub btnAboutInfo_Click
+	ShowAboutInfo
+End Sub
+
+Private Sub btnAbout_Click
+	ShowAboutInfo
+End Sub
+
+Private Sub BntAbout_Click
+	ShowAboutInfo
+End Sub
+
+Private Sub about_Click
+	ShowAboutInfo
 End Sub
 
 Private Sub B4XPage_Disappear
@@ -438,16 +524,16 @@ Private Sub Bntcsv_Click
 	ExportTableToCSV
 	#if b4a
 	DateTime.DateFormat = "yyyyMMdd"
-	Dim temname As String = "mynote" & "_"& DateTime.Date(DateTime.Now) & ".text"
-	Dim in As InputStream = File.OpenInput(xui.DefaultFolder, "mynote.text")
+	Dim temname As String = "mynote" & "_"& DateTime.Date(DateTime.Now) & ".txt"
+	Dim in As InputStream = File.OpenInput(xui.DefaultFolder, "mynote.txt")
 	Wait For (SaveFile(in, "text/plain", temname)) Complete (Success As Boolean)
 	in.Close
 	If Success Then
-		xui.MsgboxAsync("OK !","TO TEXT")
+		xui.MsgboxAsync("OK !","TO TXT")
 	End If
 	'Log("File saved successfully? " & Success)
 	#else
-	xui.MsgboxAsync("文件已导出到: " & File.Combine(xui.DefaultFolder, "mynote.text"),"文件导出")
+	xui.MsgboxAsync("文件已导出到: " & File.Combine(xui.DefaultFolder, "mynote.txt"),"文件导出")
 	#end if
 	
 End Sub
@@ -461,14 +547,18 @@ Private Sub ExportTableToCSV
 	Dim list1 As List
 	list1.Initialize
 	Dim cols() As String
+	Dim hasLunarText As Boolean = MP.EventsUseLunarText
 	
 	Do While RS.NextRow
-		cols = Array As String(RS.GetString("event_type"),RS.GetString("value"),RS.GetString("description"), RS.GetString("time"))
+		Dim lunarText As String = ""
+		If hasLunarText Then lunarText = RS.GetString("lunar_text")
+		lunarText = MP.ResolveEventLunarText(RS.GetString("time"), lunarText)
+		cols = Array As String(RS.GetString("event_type"),RS.GetString("value"),RS.GetString("description"), RS.GetString("tags"), RS.GetString("attachments_json"), RS.GetString("time"), lunarText)
 		list1.Add(cols)
 	Loop
 	
 	RS.Close
-	su.SaveCSV(xui.DefaultFolder,"mynote.text", ",", list1)
+	su.SaveCSV(xui.DefaultFolder,"mynote.txt", ",", list1)
 
 End Sub
 
