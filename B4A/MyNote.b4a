@@ -73,7 +73,7 @@ Version=13.5
 	#VersionName: 
 	#MultiDex: False
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
-	#SupportedOrientations: portrait
+	#SupportedOrientations: unspecified
 	#CanInstallToExternalStorage: False
 #End Region
 

@@ -8,8 +8,8 @@ Version=9.85
 Sub Class_Globals
 	Private Root As B4XView 'ignore
 	Private xui As XUI 'ignore
-	Public Const APP_RELEASE_INDEX As Int = 3
-	Public Const APP_LAST_UPDATE_TEXT As String = "2026-09-06"
+	Public Const APP_RELEASE_INDEX As Int = 7
+	Public Const APP_LAST_UPDATE_TEXT As String = "2026-10-01"
 	Public Note_View As NoteView
 	Public MP As B4XMainPage
 	Public PageData As B4XPageData   'Page to show the xCustomListview with the data (Página para añadir el xCLV con los datos)
@@ -805,18 +805,58 @@ Private Sub AdjustLoginLayout
 	CenterViewHorizontally(Bntregist, margin)
 	CenterViewHorizontally(Bntmodify, margin)
 	CenterViewHorizontally(BntForget, margin)
+	CenterLoginGroupVertically(margin)
 End Sub
 
 Private Sub CenterViewHorizontally(v As B4XView, margin As Int)
 	If v.IsInitialized = False Then Return
 	Dim maxWidth As Int = Max(120dip, Root.Width - 2 * margin)
-	Dim targetWidth As Int = Min(v.Width, maxWidth)
+	Dim targetWidth As Int = Min(GetLoginControlMaxWidth(v), maxWidth)
 	Dim targetLeft As Int = Max(margin, (Root.Width - targetWidth) / 2)
 	Dim targetTop As Int = v.Top
 	If targetTop + v.Height > Root.Height - margin Then
 		targetTop = Max(margin, Root.Height - v.Height - margin)
 	End If
 	v.SetLayoutAnimated(0, targetLeft, targetTop, targetWidth, v.Height)
+End Sub
+
+Private Sub GetLoginControlMaxWidth(v As B4XView) As Int
+	If v = etUser Or v = etPass Then Return 360dip
+	If v = btnLogin Then Return 260dip
+	Return 260dip
+End Sub
+
+Private Sub CenterLoginGroupVertically(margin As Int)
+	Dim views As List = GetLoginLayoutViews
+	If views.Size = 0 Then Return
+	Dim topMost As Int = 2147483647
+	Dim bottomMost As Int = -2147483648
+	For Each v As B4XView In views
+		topMost = Min(topMost, v.Top)
+		bottomMost = Max(bottomMost, v.Top + v.Height)
+	Next
+	Dim groupHeight As Int = bottomMost - topMost
+	Dim targetTop As Int = Max(margin, (Root.Height - groupHeight) / 2)
+	Dim offset As Int = targetTop - topMost
+	For Each v As B4XView In views
+		v.SetLayoutAnimated(0, v.Left, v.Top + offset, v.Width, v.Height)
+	Next
+End Sub
+
+Private Sub GetLoginLayoutViews As List
+	Dim views As List
+	views.Initialize
+	AddLoginLayoutView(views, etUser)
+	AddLoginLayoutView(views, etPass)
+	AddLoginLayoutView(views, btnLogin)
+	AddLoginLayoutView(views, Bntregist)
+	AddLoginLayoutView(views, Bntmodify)
+	AddLoginLayoutView(views, BntForget)
+	Return views
+End Sub
+
+Private Sub AddLoginLayoutView(views As List, v As B4XView)
+	If v.IsInitialized Then views.Add(v)
 End Sub
 
 #if B4J
